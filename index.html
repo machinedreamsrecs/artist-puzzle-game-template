@@ -3,19 +3,118 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>React App</title>
+  <title>Puzzle Game</title>
   <!-- React and ReactDOM via CDN -->
   <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
   <!-- Babel for JSX transformation -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 2px;
+    }
+    .cell {
+      width: 100px;
+      height: 100px;
+      border: 1px solid #ccc;
+    }
+    .piece {
+      width: 100%;
+      height: 100%;
+      background-repeat: no-repeat;
+      cursor: grab;
+    }
+    #message {
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
   <div id="root"></div>
   <script type="text/babel">
-    function App() {
-      return <h1>Hello, React!</h1>;
+    const BOARD_SIZE = 3;
+    const IMAGE_URL = 'public/assets/IMG_4557.jpeg';
+    const AUDIO_URL = 'public/assets/so%20alive%2010sec.wav';
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
     }
+
+    function App() {
+      const [board, setBoard] = React.useState(() => shuffle([...Array(BOARD_SIZE * BOARD_SIZE).keys()]));
+      const [solved, setSolved] = React.useState(false);
+      const audioRef = React.useRef(null);
+
+      React.useEffect(() => {
+        if (solved && audioRef.current) {
+          audioRef.current.play();
+        }
+      }, [solved]);
+
+      const handleDragStart = (index, e) => {
+        e.dataTransfer.setData('text/plain', index);
+      };
+
+      const allowDrop = (e) => e.preventDefault();
+
+      const handleDrop = (targetIndex, e) => {
+        e.preventDefault();
+        const sourceIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
+        if (isNaN(sourceIndex)) return;
+        const newBoard = [...board];
+        [newBoard[targetIndex], newBoard[sourceIndex]] = [newBoard[sourceIndex], newBoard[targetIndex]];
+        setBoard(newBoard);
+        if (newBoard.every((val, idx) => val === idx)) {
+          setSolved(true);
+        }
+      };
+
+      return (
+        <div>
+          {solved && (
+            <div id="message">
+              <audio ref={audioRef} src={AUDIO_URL} loop />
+              <p>Puzzle Solved! Click here to claim your reward!</p>
+              <button onClick={() => alert('Reward claimed!')}>Claim Reward</button>
+            </div>
+          )}
+          <div id="board">
+            {board.map((piece, index) => (
+              <div
+                key={index}
+                className="cell"
+                onDrop={(e) => handleDrop(index, e)}
+                onDragOver={allowDrop}
+              >
+                <div
+                  className="piece"
+                  draggable={!solved}
+                  onDragStart={(e) => handleDragStart(index, e)}
+                  style={{
+                    backgroundImage: `url(${IMAGE_URL})`,
+                    backgroundSize: `${BOARD_SIZE * 100}% ${BOARD_SIZE * 100}%`,
+                    backgroundPosition: `${-(piece % BOARD_SIZE) * 100}% ${-Math.floor(piece / BOARD_SIZE) * 100}%`,
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
     ReactDOM.render(<App />, document.getElementById('root'));
   </script>
 </body>
