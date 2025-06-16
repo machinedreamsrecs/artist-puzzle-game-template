@@ -41,6 +41,7 @@
   <div id="root"></div>
   <script type="text/babel">
     const BOARD_SIZE = 3;
+    // Image used for the puzzle pieces
     const IMAGE_URL = 'public/assets/IMG_4557.jpeg';
     const AUDIO_URL = 'public/assets/so%20alive%2010sec.wav';
 
@@ -52,8 +53,21 @@
       return array;
     }
 
+    function getPieceStyle(index) {
+      const size = BOARD_SIZE * 100;
+      const x = -(index % BOARD_SIZE) * 100;
+      const y = -Math.floor(index / BOARD_SIZE) * 100;
+      return {
+        backgroundImage: `url(${IMAGE_URL})`,
+        backgroundSize: `${size}% ${size}%`,
+        backgroundPosition: `${x}% ${y}%`,
+      };
+    }
+
     function App() {
-      const [board, setBoard] = React.useState(() => shuffle([...Array(BOARD_SIZE * BOARD_SIZE).keys()]));
+      const [board, setBoard] = React.useState(() =>
+        shuffle([...Array(BOARD_SIZE * BOARD_SIZE).keys()])
+      );
       const [solved, setSolved] = React.useState(false);
       const audioRef = React.useRef(null);
 
@@ -102,11 +116,7 @@
                   className="piece"
                   draggable={!solved}
                   onDragStart={(e) => handleDragStart(index, e)}
-                  style={{
-                    backgroundImage: `url(${IMAGE_URL})`,
-                    backgroundSize: `${BOARD_SIZE * 100}% ${BOARD_SIZE * 100}%`,
-                    backgroundPosition: `${-(piece % BOARD_SIZE) * 100}% ${-Math.floor(piece / BOARD_SIZE) * 100}%`,
-                  }}
+                  style={getPieceStyle(piece)}
                 />
               </div>
             ))}
