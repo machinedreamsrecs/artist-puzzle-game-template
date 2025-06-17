@@ -11,39 +11,42 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <style>
-    /* ======= Neutral “template” UI ======= */
+    /* —— layout ——————————————————————————— */
     html,body{
       height:100%; margin:0;
       font-family: 'Inter', Arial, sans-serif;
       background:linear-gradient(135deg,#f1f4f8 0%,#e2e6eb 100%);
       display:flex; flex-direction:column; justify-content:center; align-items:center;
     }
-    h1{font-size:22px; margin-bottom:24px; color:#333;}
+    h1{font-size:clamp(18px,4vw,24px); margin-bottom:clamp(16px,4vw,28px); color:#333;}
+
+    /* —— responsive tile size —————————————————
+       Use CSS var --tile. 110px on desktop, shrinks on small screens */
+    :root{ --tile:110px; }
+    @media(max-width:480px){ :root{ --tile:80px; } }
+    @media(max-width:360px){ :root{ --tile:70px; } }
+
     #board{
       display:grid;
-      grid-template-columns:repeat(3,110px);
-      grid-template-rows:repeat(3,110px);
+      grid-template-columns:repeat(3,var(--tile));
+      grid-template-rows:repeat(3,var(--tile));
       gap:4px;
       box-shadow:0 6px 18px rgba(0,0,0,.1);
       border-radius:12px;
       overflow:hidden;
       background:#fff;
     }
-    .cell{width:110px; height:110px; position:relative;}
-    .piece{
-      width:100%; height:100%;
-      cursor:grab;
-      transition:transform .15s;
-    }
+    .cell  { width:var(--tile); height:var(--tile); position:relative; }
+    .piece { width:100%; height:100%; cursor:grab; transition:transform .15s; }
     .piece:active{cursor:grabbing; transform:scale(.97);}
-    #reward{
-      margin-top:28px; text-align:center;
-    }
+
+    #reward{margin-top:clamp(20px,6vw,32px); text-align:center;}
     #reward a{
       display:inline-block; padding:12px 24px;
       background:#111; color:#fff; text-decoration:none;
       border-radius:8px; font-weight:600;
       box-shadow:0 3px 10px rgba(0,0,0,.15);
+      font-size:clamp(14px,4vw,16px);
     }
   </style>
 </head>
@@ -52,25 +55,23 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    /* =========== Config =========== */
-    const GRID        = 3;                                          // 3×3
-    const ART         = 'public/assets/IMG_4557.jpeg';              // artwork
-    const REWARD_URL  = 'https://example.com/your-special-link';    // <— change per rollout
-    /* ================================= */
-
+    /* ——— config ——— */
+    const GRID = 3;
+    const ART  = 'public/assets/IMG_4557.jpeg';
+    const LINK = 'https://example.com/your-special-link';   // change per rollout
+    /* ——— helpers ——— */
     const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-
+    const px = v => `calc(var(--tile) * ${v/110})`;          // scale offset with tile size
     const pieceStyle=i=>{
-      const size=GRID*110;                               // 330 px
-      const x=-(i%GRID)*110, y=-Math.floor(i/GRID)*110;  // offsets
-      return{
+      const x = -(i%GRID)*110, y = -Math.floor(i/GRID)*110;
+      return {
         backgroundImage:`url(${ART})`,
-        backgroundSize:`${size}px ${size}px`,
-        backgroundPosition:`${x}px ${y}px`,
+        backgroundSize:`calc(var(--tile)*3) calc(var(--tile)*3)`,
+        backgroundPosition:`${px(x)} ${px(y)}`,
         backgroundRepeat:'no-repeat'
       };
     };
-
+    /* ——— app ——— */
     function App(){
       const correct=[...Array(GRID*GRID).keys()];
       const [tiles,setTiles]=React.useState(()=>shuffle([...correct]));
@@ -102,16 +103,13 @@
 
           {done&&(
             <div id="reward">
-              <p>Puzzle solved! Grab your reward:</p>
-              <a href={REWARD_URL} target="_blank" rel="noopener noreferrer">
-                Claim Reward →
-              </a>
+              <p style={{margin:'0 0 12px'}}>Puzzle solved! Grab your reward:</p>
+              <a href={LINK} target="_blank" rel="noopener noreferrer">Claim Reward →</a>
             </div>
           )}
         </>
       );
     }
-
     ReactDOM.render(<App/>,document.getElementById('root'));
   </script>
 </body>
