@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Puzzle Game</title>
+  <title>Artist Puzzle Game</title>
 
   <!-- React + ReactDOM -->
   <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
@@ -22,32 +22,72 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const SIZE = 3;                                           // 3×3
-    const IMG  = 'public/assets/IMG_4557.jpeg';               // artwork
-    const MP3  = 'public/assets/so%20alive%2010sec.wav';      // audio loop
+    /* === 3×3 Puzzle === */
+    const GRID = 3;
+    const ART  = 'public/assets/IMG_4557.jpeg';
+    const LOOP = 'public/assets/so%20alive%2010sec.wav';
 
     const shuffle = a => { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
-    const sliceStyle = i => {
-      const full = SIZE*100,  x=-(i%SIZE)*100,  y=-Math.floor(i/SIZE)*100;
-      return { backgroundImage:`url(${IMG})`, backgroundSize:`${full}px ${full}px`, backgroundPosition:`${x}px ${y}px`, backgroundRepeat:'no-repeat' };
+
+    const pieceStyle = i => {
+      const full = GRID * 100;                  // 300 px
+      const x = -(i % GRID) * 100;              // offset left
+      const y = -Math.floor(i / GRID) * 100;    // offset top
+      return {
+        backgroundImage:`url(${ART})`,
+        backgroundSize:`${full}px ${full}px`,
+        backgroundPosition:`${x}px ${y}px`,
+        backgroundRepeat:'no-repeat',
+      };
     };
 
-    function App(){
-      const correct=[...Array(SIZE*SIZE).keys()];
-      const [tiles,setTiles]=React.useState(()=>shuffle([...correct]));
-      const [done,setDone]=React.useState(false);
-      const audio=React.useRef(null);
+    function App() {
+      const correct = [...Array(GRID * GRID).keys()];          // [0…8]
+      const [tiles, setTiles] = React.useState(() => shuffle([...correct]));
+      const [done,  setDone]  = React.useState(false);
+      const audioRef = React.useRef(null);
 
-      React.useEffect(()=>{ if(done) audio.current.play(); },[done]);
+      React.useEffect(() => { if (done) audioRef.current.play(); }, [done]);
 
-      const dragStart=(i,e)=>e.dataTransfer.setData('txt',i);
-      const allow=e=>e.preventDefault();
-      const drop=(to,e)=>{e.preventDefault(); const from=parseInt(e.dataTransfer.getData('txt'),10);
-        const t=[...tiles]; [t[to],t[from]]=[t[from],t[to]]; setTiles(t); if(t.every((v,i)=>v===i)) setDone(true);};
+      const dragStart = (src, e) => e.dataTransfer.setData('idx', src);
+      const allow     = e => e.preventDefault();
+      const drop = (dst, e) => {
+        e.preventDefault();
+        const src = parseInt(e.dataTransfer.getData('idx'), 10);
+        if (isNaN(src)) return;
+        const next = [...tiles];
+        [next[dst], next[src]] = [next[src], next[dst]];
+        setTiles(next);
+        if (next.every((v,i) => v === i)) setDone(true);
+      };
 
-      return(<div>
-        {done&&(<div id="message"><audio ref={audio} src={MP3} loop/>Puzzle solved! <button onClick={()=>alert('Reward claimed!')}>Claim reward</button></div>)}
-        <div id="board">
-          {tiles.map((p,i)=>(
-            <div key={i} className="cell" on
+      return (
+        <div>
+          {done && (
+            <div id="message">
+              <audio ref={audioRef} src={LOOP} loop />
+              Puzzle solved! <button onClick={() => alert('Reward claimed!')}>Claim reward</button>
+            </div>
+          )}
 
+          <div id="board">
+            {tiles.map((tile, i) => (
+              <div key={i}
+                   className="cell"
+                   onDrop={e => drop(i, e)}
+                   onDragOver={allow}>
+                <div className="piece"
+                     style={pieceStyle(tile)}
+                     draggable={!done}
+                     onDragStart={e => dragStart(i, e)} />
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
