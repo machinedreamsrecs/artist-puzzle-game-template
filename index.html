@@ -5,49 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Artist Puzzle</title>
 
-  <!-- React -->
+  <!-- React + Babel -->
   <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <style>
-    /* —— layout ——————————————————————————— */
     html,body{
       height:100%; margin:0;
-      font-family: 'Inter', Arial, sans-serif;
+      font-family:'Inter',Arial,sans-serif;
       background:linear-gradient(135deg,#f1f4f8 0%,#e2e6eb 100%);
       display:flex; flex-direction:column; justify-content:center; align-items:center;
     }
     h1{font-size:clamp(18px,4vw,24px); margin-bottom:clamp(16px,4vw,28px); color:#333;}
-
-    /* —— responsive tile size —————————————————
-       Use CSS var --tile. 110px on desktop, shrinks on small screens */
-    :root{ --tile:110px; }
-    @media(max-width:480px){ :root{ --tile:80px; } }
-    @media(max-width:360px){ :root{ --tile:70px; } }
-
+    :root{--tile:110px;}                 /* desktop size */
+    @media(max-width:480px){:root{--tile:80px;}}
+    @media(max-width:360px){:root{--tile:70px;}}
     #board{
       display:grid;
       grid-template-columns:repeat(3,var(--tile));
       grid-template-rows:repeat(3,var(--tile));
-      gap:4px;
-      box-shadow:0 6px 18px rgba(0,0,0,.1);
-      border-radius:12px;
-      overflow:hidden;
-      background:#fff;
+      gap:4px; box-shadow:0 6px 18px rgba(0,0,0,.1);
+      border-radius:12px; overflow:hidden; background:#fff;
     }
-    .cell  { width:var(--tile); height:var(--tile); position:relative; }
-    .piece { width:100%; height:100%; cursor:grab; transition:transform .15s; }
-    .piece:active{cursor:grabbing; transform:scale(.97);}
-
-    #reward{margin-top:clamp(20px,6vw,32px); text-align:center;}
-    #reward a{
-      display:inline-block; padding:12px 24px;
-      background:#111; color:#fff; text-decoration:none;
-      border-radius:8px; font-weight:600;
-      box-shadow:0 3px 10px rgba(0,0,0,.15);
-      font-size:clamp(14px,4vw,16px);
+    .cell{width:var(--tile);height:var(--tile);position:relative;}
+    .piece{
+      width:100%;height:100%;
+      transition:transform .15s, box-shadow .15s;
+      border-radius:4px;
     }
+    .selected{box-shadow:0 0 0 3px #26a; transform:scale(.95);}
+    #reward{margin-top:clamp(20px,6vw,32px);text-align:center;}
+    #reward a{display:inline-block;padding:12px 24px;background:#111;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:clamp(14px,4vw,16px);}
   </style>
 </head>
 <body>
@@ -55,48 +44,47 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    /* ——— config ——— */
-    const GRID = 3;
-    const ART  = 'public/assets/IMG_4557.jpeg';
-    const LINK = 'https://example.com/your-special-link';   // change per rollout
-    /* ——— helpers ——— */
+    /* —— config —— */
+    const GRID=3;
+    const ART ='public/assets/IMG_4557.jpeg';
+    const LINK='https://example.com/your-special-link';  // change each rollout
+
+    /* helpers */
     const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-    const px = v => `calc(var(--tile) * ${v/110})`;          // scale offset with tile size
-    const pieceStyle=i=>{
-      const x = -(i%GRID)*110, y = -Math.floor(i/GRID)*110;
-      return {
+    const px=(v)=>`calc(var(--tile)*${v/110})`;
+    const styleFor=i=>{
+      const x=-(i%GRID)*110, y=-Math.floor(i/GRID)*110;
+      return{
         backgroundImage:`url(${ART})`,
         backgroundSize:`calc(var(--tile)*3) calc(var(--tile)*3)`,
         backgroundPosition:`${px(x)} ${px(y)}`,
         backgroundRepeat:'no-repeat'
       };
     };
-    /* ——— app ——— */
+
     function App(){
       const correct=[...Array(GRID*GRID).keys()];
       const [tiles,setTiles]=React.useState(()=>shuffle([...correct]));
+      const [sel,setSel]=React.useState(null);       // selected index
       const [done,setDone]=React.useState(false);
 
-      const dragStart=(i,e)=>e.dataTransfer.setData('idx',i);
-      const allow=e=>e.preventDefault();
-      const drop=(dst,e)=>{
-        e.preventDefault();
-        const src=parseInt(e.dataTransfer.getData('idx'),10);
-        if(isNaN(src)) return;
-        const t=[...tiles]; [t[dst],t[src]]=[t[src],t[dst]];
-        setTiles(t); if(t.every((v,i)=>v===i)) setDone(true);
+      const tap=(idx)=>{
+        if(done) return;
+        if(sel===null){ setSel(idx); return; }       // first tap
+        if(sel===idx){ setSel(null); return; }       // unselect same tile
+
+        // swap tiles
+        const next=[...tiles]; [next[idx],next[sel]]=[next[sel],next[idx]];
+        setTiles(next); setSel(null);
+        if(next.every((v,i)=>v===i)) setDone(true);
       };
 
       return(
         <>
           <div id="board">
             {tiles.map((tile,i)=>(
-              <div key={i} className="cell"
-                   onDrop={e=>drop(i,e)} onDragOver={allow}>
-                <div className="piece"
-                     style={pieceStyle(tile)}
-                     draggable={!done}
-                     onDragStart={e=>dragStart(i,e)} />
+              <div key={i} className="cell" onClick={()=>tap(i)}>
+                <div className={`piece ${sel===i?'selected':''}`} style={styleFor(tile)}/>
               </div>
             ))}
           </div>
