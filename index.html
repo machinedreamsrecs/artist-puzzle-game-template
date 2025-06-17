@@ -10,71 +10,80 @@
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
 <style>
-  :root{ --size:320px;}                       /* desktop diameter */
-  @media(max-width:480px){ :root{--size:240px;} }
+  :root{ --size:320px; }                       /* desktop */
+  @media(max-width:480px){ :root{--size:240px;}}
 
   body{margin:0;height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;
        font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;}
-  h1{font-size:clamp(18px,4vw,22px);margin-bottom:clamp(18px,4vw,26px);color:#333}
+  h1{font-size:clamp(18px,4vw,22px);margin-bottom:clamp(18px,4vw,28px);color:#333}
 
   #disc{position:relative;width:var(--size);height:var(--size);}
   .ring{position:absolute;top:0;left:0;width:100%;height:100%;border-radius:50%;
-        background-image:url("public/assets/IMG_4557.jpeg");background-size:cover;transition:transform .3s ease;}
+        background-size:cover;transition:transform .25s ease;}
 
-  /* mask each ring with radial-gradient */
-  .ring[data-layer="0"]{clip-path:circle(16%);}                                 /* label */
-  .ring[data-layer="1"]{clip-path:circle(33%);background-position:center;}      /* mid groov */
-  .ring[data-layer="2"]{clip-path:circle(50%);background-position:center;}      /* outer */
+  /* four distinct concentric masks */
+  .ring[data-layer="0"]{clip-path:circle(15%);}
+  .ring[data-layer="1"]{clip-path:circle(30%);}
+  .ring[data-layer="2"]{clip-path:circle(45%);}
+  .ring[data-layer="3"]{clip-path:circle(60%);}
 
   #reward{margin-top:clamp(22px,5vw,34px);text-align:center;}
-  #reward a{display:inline-block;padding:12px 22px;background:#111;color:#fff;text-decoration:none;border-radius:8px;font-size:clamp(14px,4vw,16px);}
+  #reward a{display:inline-block;padding:12px 22px;background:#111;color:#fff;text-decoration:none;border-radius:8px;
+            font-size:clamp(14px,4vw,16px);}
 </style>
 </head>
 <body>
-<h1>Spin the record to align the art</h1>
+<h1>Spin each ring to align the vinyl art</h1>
 <div id="root"></div>
 
 <script type="text/babel">
-const ART='public/assets/IMG_4557.jpeg';
-const LINK='https://example.com/your-special-link';   // change per rollout
-const LAYERS=[0,1,2];                                 // 3 rings
-const STEP=120;                                       // degrees per click (360/3)
+  /* —— Config —— */
+  const ART   = 'public/assets/IMG_4557.jpeg';     // artwork source
+  const LINK  = 'https://example.com/your-reward'; // reward link
+  const LAYERS= [0,1,2,3];                         // 4 rings
+  const STEP  = 90;                                // deg rotated per tap
 
-function Ring({layer,angle,onClick}){                 // individual ring
-  return(
-    <div className="ring"
-         data-layer={layer}
-         style={{transform:`rotate(${angle}deg)`,backgroundImage:`url(${ART})`}}
-         onClick={onClick}/>
-  );
-}
+  /* Helpers */
+  const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 
-function App(){
-  const [angles,setAngles]=React.useState(()=>LAYERS.map(()=>STEP*Math.floor(Math.random()*3)));
-  const rotate=i=>{
-    const next=[...angles]; next[i]=(next[i]+STEP)%360; setAngles(next);
-  };
-  const solved=angles.every(a=>a===0);
+  function Ring({layer,angle,onTap}){
+    return (
+      <div className="ring"
+           data-layer={layer}
+           style={{transform:`rotate(${angle}deg)`,backgroundImage:`url(${ART})`}}
+           onClick={onTap}/>
+    );
+  }
 
-  return(
-    <>
-      <div id="disc">
-        {LAYERS.map(i=>(
-          <Ring key={i} layer={i} angle={angles[i]} onClick={()=>rotate(i)}/>
-        ))}
-      </div>
+  function App(){
+    const [angles,setAngles]=React.useState(()=>shuffle(LAYERS.map(()=>STEP*Math.floor(Math.random()*4))));
+    const solved = angles.every(a=>a===0);
 
-      {solved&&(
-        <div id="reward">
-          <p>Puzzle solved! Grab your reward:</p>
-          <a href={LINK} target="_blank" rel="noopener noreferrer">Claim Reward →</a>
+    const spin = idx => {
+      if(solved) return;
+      const next=[...angles]; next[idx]=(next[idx]+STEP)%360;
+      setAngles(next);
+    };
+
+    return (
+      <>
+        <div id="disc">
+          {LAYERS.map(i=>(
+            <Ring key={i} layer={i} angle={angles[i]} onTap={()=>spin(i)}/>
+          ))}
         </div>
-      )}
-    </>
-  );
-}
 
-ReactDOM.render(<App/>,document.getElementById("root"));
+        {solved && (
+          <div id="reward">
+            <p>Puzzle solved! Grab your reward:</p>
+            <a href={LINK} target="_blank" rel="noopener noreferrer">Claim Reward →</a>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  ReactDOM.render(<App/>,document.getElementById('root'));
 </script>
 </body>
 </html>
