@@ -10,26 +10,44 @@
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
 <style>
-  :root{ --size:320px; }                       /* desktop */
-  @media(max-width:480px){ :root{--size:240px;}}
+  :root{ --size:320px;}
+  @media(max-width:480px){ :root{--size:240px;} }
 
   body{margin:0;height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;
        font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;}
   h1{font-size:clamp(18px,4vw,22px);margin-bottom:clamp(18px,4vw,28px);color:#333}
 
   #disc{position:relative;width:var(--size);height:var(--size);}
-  .ring{position:absolute;top:0;left:0;width:100%;height:100%;border-radius:50%;
-        background-size:cover;transition:transform .25s ease;}
+  .ring{
+    position:absolute;top:0;left:0;width:100%;height:100%;
+    border-radius:50%;background-size:cover;
+    transition:transform .25s ease;cursor:pointer;
+  }
 
-  /* four distinct concentric masks */
-  .ring[data-layer="0"]{clip-path:circle(15%);}
-  .ring[data-layer="1"]{clip-path:circle(30%);}
-  .ring[data-layer="2"]{clip-path:circle(45%);}
-  .ring[data-layer="3"]{clip-path:circle(60%);}
+  /* donut masks for each ring (inner% , outer%) */
+  .ring[data-layer="0"]{
+    --in:0%;   --out:15%;
+  }
+  .ring[data-layer="1"]{
+    --in:15%;  --out:30%;
+  }
+  .ring[data-layer="2"]{
+    --in:30%;  --out:45%;
+  }
+  .ring[data-layer="3"]{
+    --in:45%;  --out:60%;
+  }
+
+  .ring{
+    /* WebKit + standard masks */
+    -webkit-mask-image:radial-gradient(circle at center,transparent var(--in),#000 var(--in) calc(var(--in) + 2%),#000 var(--in) var(--out),transparent var(--out));
+    mask-image:radial-gradient(circle at center,transparent var(--in),#000 var(--in) calc(var(--in) + 2%),#000 var(--in) var(--out),transparent var(--out));
+    -webkit-mask-repeat:no-repeat;
+    mask-repeat:no-repeat;
+  }
 
   #reward{margin-top:clamp(22px,5vw,34px);text-align:center;}
-  #reward a{display:inline-block;padding:12px 22px;background:#111;color:#fff;text-decoration:none;border-radius:8px;
-            font-size:clamp(14px,4vw,16px);}
+  #reward a{display:inline-block;padding:12px 22px;background:#111;color:#fff;text-decoration:none;border-radius:8px;font-size:clamp(14px,4vw,16px);}
 </style>
 </head>
 <body>
@@ -37,53 +55,50 @@
 <div id="root"></div>
 
 <script type="text/babel">
-  /* —— Config —— */
-  const ART   = 'public/assets/IMG_4557.jpeg';     // artwork source
-  const LINK  = 'https://example.com/your-reward'; // reward link
-  const LAYERS= [0,1,2,3];                         // 4 rings
-  const STEP  = 90;                                // deg rotated per tap
+const ART='public/assets/IMG_4557.jpeg';
+const LINK='https://example.com/your-reward';   // change per rollout
+const LAYERS=[0,1,2,3];                         // 4 rings
+const STEP=90;                                  // 90° per tap
 
-  /* Helpers */
-  const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function Ring({layer,angle,onTap}){
+  return(
+    <div className="ring"
+         data-layer={layer}
+         style={{transform:`rotate(${angle}deg)`,backgroundImage:`url(${ART})`}}
+         onClick={onTap}/>
+  );
+}
 
-  function Ring({layer,angle,onTap}){
-    return (
-      <div className="ring"
-           data-layer={layer}
-           style={{transform:`rotate(${angle}deg)`,backgroundImage:`url(${ART})`}}
-           onClick={onTap}/>
-    );
-  }
+function App(){
+  const randAngle=()=>STEP*Math.floor(Math.random()*4);
+  const [angles,setAngles]=React.useState(()=>LAYERS.map(randAngle));
+  const solved=angles.every(a=>a===0);
 
-  function App(){
-    const [angles,setAngles]=React.useState(()=>shuffle(LAYERS.map(()=>STEP*Math.floor(Math.random()*4))));
-    const solved = angles.every(a=>a===0);
+  const spin=idx=>{
+    if(solved) return;
+    const next=[...angles]; next[idx]=(next[idx]+STEP)%360;
+    setAngles(next);
+  };
 
-    const spin = idx => {
-      if(solved) return;
-      const next=[...angles]; next[idx]=(next[idx]+STEP)%360;
-      setAngles(next);
-    };
+  return(
+    <>
+      <div id="disc">
+        {LAYERS.map(i=>(
+          <Ring key={i} layer={i} angle={angles[i]} onTap={()=>spin(i)}/>
+        ))}
+      </div>
 
-    return (
-      <>
-        <div id="disc">
-          {LAYERS.map(i=>(
-            <Ring key={i} layer={i} angle={angles[i]} onTap={()=>spin(i)}/>
-          ))}
+      {solved&&(
+        <div id="reward">
+          <p>Puzzle solved! Grab your reward:</p>
+          <a href={LINK} target="_blank" rel="noopener noreferrer">Claim Reward →</a>
         </div>
+      )}
+    </>
+  );
+}
 
-        {solved && (
-          <div id="reward">
-            <p>Puzzle solved! Grab your reward:</p>
-            <a href={LINK} target="_blank" rel="noopener noreferrer">Claim Reward →</a>
-          </div>
-        )}
-      </>
-    );
-  }
-
-  ReactDOM.render(<App/>,document.getElementById('root'));
+ReactDOM.render(<App/>,document.getElementById('root'));
 </script>
 </body>
 </html>
