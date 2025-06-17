@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head>git pull origin main
+
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Puzzle Game</title>
@@ -29,77 +30,84 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    /* === SIMPLE 3×3 PUZZLE === */
-    const BOARD_SIZE = 3;                                     // 3×3 grid
-    const IMG_SRC   = 'public/assets/IMG_4557.jpeg';          // your artwork
-    const AUDIO_SRC = 'public/assets/so%20alive%2010sec.wav'; // your loop
+    const BOARD_SIZE = 3;
+    // Image used for the puzzle pieces
+    const IMAGE_URL = 'public/assets/IMG_4557.jpeg';
+    const AUDIO_URL = 'public/assets/so%20alive%2010sec.wav';
 
-    // Fisher–Yates shuffle
-    function shuffle(arr) {
-      for (let i = arr.length - 1; i > 0; i--) {
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
+        [array[i], array[j]] = [array[j], array[i]];
       }
-      return arr;
+      return array;
     }
 
-    // Return style for one tile
-    function pieceStyle(index) {
-      const sizePx = BOARD_SIZE * 100;       // full image = 300 px
-      const x = -(index % BOARD_SIZE) * 100; // left offset in px
-      const y = -Math.floor(index / BOARD_SIZE) * 100; // top offset
+    function getPieceStyle(index) {
+      const size = BOARD_SIZE * 100;
+      const x = -(index % BOARD_SIZE) * 100;
+      const y = -Math.floor(index / BOARD_SIZE) * 100;
       return {
-        backgroundImage: `url(${IMG_SRC})`,
-        backgroundSize:  `${sizePx}px ${sizePx}px`, // *** use px, not % ***
-        backgroundPosition: `${x}px ${y}px`,        // *** use px, not % ***
-        backgroundRepeat: 'no-repeat',
+        backgroundImage: `url(${IMAGE_URL})`,
+        backgroundSize: `${size}% ${size}%`,
+        backgroundPosition: `${x}% ${y}%`,
       };
     }
 
     function App() {
-      const correct = [...Array(BOARD_SIZE * BOARD_SIZE).keys()]; // [0…8]
-      const [board, setBoard] = React.useState(() => shuffle([...correct]));
+      const [board, setBoard] = React.useState(() =>
+        shuffle([...Array(BOARD_SIZE * BOARD_SIZE).keys()])
+      );
       const [solved, setSolved] = React.useState(false);
       const audioRef = React.useRef(null);
 
       React.useEffect(() => {
-        if (solved && audioRef.current) audioRef.current.play();
+        if (solved && audioRef.current) {
+          audioRef.current.play();
+        }
       }, [solved]);
 
-      const onDragStart = (src, e) => e.dataTransfer.setData('text/plain', src);
-      const allowDrop   = e => e.preventDefault();
+      const handleDragStart = (index, e) => {
+        e.dataTransfer.setData('text/plain', index);
+      };
 
-      const onDrop = (dst, e) => {
+      const allowDrop = (e) => e.preventDefault();
+
+      const handleDrop = (targetIndex, e) => {
         e.preventDefault();
-        const src = parseInt(e.dataTransfer.getData('text/plain'), 10);
-        if (isNaN(src)) return;
+        const sourceIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
+        if (isNaN(sourceIndex)) return;
         const newBoard = [...board];
-        [newBoard[dst], newBoard[src]] = [newBoard[src], newBoard[dst]];
+        [newBoard[targetIndex], newBoard[sourceIndex]] = [newBoard[sourceIndex], newBoard[targetIndex]];
         setBoard(newBoard);
-        if (newBoard.every((v, i) => v === correct[i])) setSolved(true);
+        if (newBoard.every((val, idx) => val === idx)) {
+          setSolved(true);
+        }
       };
 
       return (
         <div>
           {solved && (
             <div id="message">
-              <audio ref={audioRef} src={AUDIO_SRC} loop />
-              Puzzle solved! <button onClick={() => alert('Reward claimed!')}>
-              Claim reward
-              </button>
+              <audio ref={audioRef} src={AUDIO_URL} loop />
+              <p>Puzzle Solved! Click here to claim your reward!</p>
+              <button onClick={() => alert('Reward claimed!')}>Claim Reward</button>
             </div>
           )}
-
           <div id="board">
-            {board.map((piece, idx) => (
-              <div key={idx}
-                   className="cell"
-                   onDrop={e => onDrop(idx, e)}
-                   onDragOver={allowDrop}>
-                <div className="piece"
-                     draggable={!solved}
-                     onDragStart={e => onDragStart(idx, e)}
-                     style={pieceStyle(piece)} />
+            {board.map((piece, index) => (
+              <div
+                key={index}
+                className="cell"
+                onDrop={(e) => handleDrop(index, e)}
+                onDragOver={allowDrop}
+              >
+                <div
+                  className="piece"
+                  draggable={!solved}
+                  onDragStart={(e) => handleDragStart(index, e)}
+                  style={getPieceStyle(piece)}
+                />
               </div>
             ))}
           </div>
@@ -107,7 +115,7 @@
       );
     }
 
-    ReactDOM.render(<App />, document.getElementById('root'));
-  </script>
+ReactDOM.render(<PuzzleBoard />, document.getElementById("root"));
+</script>
 </body>
 </html>
