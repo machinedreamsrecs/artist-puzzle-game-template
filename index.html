@@ -1,104 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Artist Puzzle</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Vinyl Spin Puzzle</title>
 
-  <!-- React + Babel -->
-  <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <style>
-    html,body{
-      height:100%; margin:0;
-      font-family:'Inter',Arial,sans-serif;
-      background:linear-gradient(135deg,#f1f4f8 0%,#e2e6eb 100%);
-      display:flex; flex-direction:column; justify-content:center; align-items:center;
-    }
-    h1{font-size:clamp(18px,4vw,24px); margin-bottom:clamp(16px,4vw,28px); color:#333;}
-    :root{--tile:110px;}                 /* desktop size */
-    @media(max-width:480px){:root{--tile:80px;}}
-    @media(max-width:360px){:root{--tile:70px;}}
-    #board{
-      display:grid;
-      grid-template-columns:repeat(3,var(--tile));
-      grid-template-rows:repeat(3,var(--tile));
-      gap:4px; box-shadow:0 6px 18px rgba(0,0,0,.1);
-      border-radius:12px; overflow:hidden; background:#fff;
-    }
-    .cell{width:var(--tile);height:var(--tile);position:relative;}
-    .piece{
-      width:100%;height:100%;
-      transition:transform .15s, box-shadow .15s;
-      border-radius:4px;
-    }
-    .selected{box-shadow:0 0 0 3px #26a; transform:scale(.95);}
-    #reward{margin-top:clamp(20px,6vw,32px);text-align:center;}
-    #reward a{display:inline-block;padding:12px 24px;background:#111;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:clamp(14px,4vw,16px);}
-  </style>
+<style>
+  :root{ --size:320px;}                       /* desktop diameter */
+  @media(max-width:480px){ :root{--size:240px;} }
+
+  body{margin:0;height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;
+       font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;}
+  h1{font-size:clamp(18px,4vw,22px);margin-bottom:clamp(18px,4vw,26px);color:#333}
+
+  #disc{position:relative;width:var(--size);height:var(--size);}
+  .ring{position:absolute;top:0;left:0;width:100%;height:100%;border-radius:50%;
+        background-image:url("public/assets/IMG_4557.jpeg");background-size:cover;transition:transform .3s ease;}
+
+  /* mask each ring with radial-gradient */
+  .ring[data-layer="0"]{clip-path:circle(16%);}                                 /* label */
+  .ring[data-layer="1"]{clip-path:circle(33%);background-position:center;}      /* mid groov */
+  .ring[data-layer="2"]{clip-path:circle(50%);background-position:center;}      /* outer */
+
+  #reward{margin-top:clamp(22px,5vw,34px);text-align:center;}
+  #reward a{display:inline-block;padding:12px 22px;background:#111;color:#fff;text-decoration:none;border-radius:8px;font-size:clamp(14px,4vw,16px);}
+</style>
 </head>
 <body>
-  <h1>Solve the puzzle to unlock your reward!</h1>
-  <div id="root"></div>
+<h1>Spin the record to align the art</h1>
+<div id="root"></div>
 
-  <script type="text/babel">
-    /* —— config —— */
-    const GRID=3;
-    const ART ='public/assets/IMG_4557.jpeg';
-    const LINK='https://example.com/your-special-link';  // change each rollout
+<script type="text/babel">
+const ART='public/assets/IMG_4557.jpeg';
+const LINK='https://example.com/your-special-link';   // change per rollout
+const LAYERS=[0,1,2];                                 // 3 rings
+const STEP=120;                                       // degrees per click (360/3)
 
-    /* helpers */
-    const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-    const px=(v)=>`calc(var(--tile)*${v/110})`;
-    const styleFor=i=>{
-      const x=-(i%GRID)*110, y=-Math.floor(i/GRID)*110;
-      return{
-        backgroundImage:`url(${ART})`,
-        backgroundSize:`calc(var(--tile)*3) calc(var(--tile)*3)`,
-        backgroundPosition:`${px(x)} ${px(y)}`,
-        backgroundRepeat:'no-repeat'
-      };
-    };
+function Ring({layer,angle,onClick}){                 // individual ring
+  return(
+    <div className="ring"
+         data-layer={layer}
+         style={{transform:`rotate(${angle}deg)`,backgroundImage:`url(${ART})`}}
+         onClick={onClick}/>
+  );
+}
 
-    function App(){
-      const correct=[...Array(GRID*GRID).keys()];
-      const [tiles,setTiles]=React.useState(()=>shuffle([...correct]));
-      const [sel,setSel]=React.useState(null);       // selected index
-      const [done,setDone]=React.useState(false);
+function App(){
+  const [angles,setAngles]=React.useState(()=>LAYERS.map(()=>STEP*Math.floor(Math.random()*3)));
+  const rotate=i=>{
+    const next=[...angles]; next[i]=(next[i]+STEP)%360; setAngles(next);
+  };
+  const solved=angles.every(a=>a===0);
 
-      const tap=(idx)=>{
-        if(done) return;
-        if(sel===null){ setSel(idx); return; }       // first tap
-        if(sel===idx){ setSel(null); return; }       // unselect same tile
+  return(
+    <>
+      <div id="disc">
+        {LAYERS.map(i=>(
+          <Ring key={i} layer={i} angle={angles[i]} onClick={()=>rotate(i)}/>
+        ))}
+      </div>
 
-        // swap tiles
-        const next=[...tiles]; [next[idx],next[sel]]=[next[sel],next[idx]];
-        setTiles(next); setSel(null);
-        if(next.every((v,i)=>v===i)) setDone(true);
-      };
+      {solved&&(
+        <div id="reward">
+          <p>Puzzle solved! Grab your reward:</p>
+          <a href={LINK} target="_blank" rel="noopener noreferrer">Claim Reward →</a>
+        </div>
+      )}
+    </>
+  );
+}
 
-      return(
-        <>
-          <div id="board">
-            {tiles.map((tile,i)=>(
-              <div key={i} className="cell" onClick={()=>tap(i)}>
-                <div className={`piece ${sel===i?'selected':''}`} style={styleFor(tile)}/>
-              </div>
-            ))}
-          </div>
-
-          {done&&(
-            <div id="reward">
-              <p style={{margin:'0 0 12px'}}>Puzzle solved! Grab your reward:</p>
-              <a href={LINK} target="_blank" rel="noopener noreferrer">Claim Reward →</a>
-            </div>
-          )}
-        </>
-      );
-    }
-    ReactDOM.render(<App/>,document.getElementById('root'));
-  </script>
+ReactDOM.render(<App/>,document.getElementById("root"));
+</script>
 </body>
 </html>
